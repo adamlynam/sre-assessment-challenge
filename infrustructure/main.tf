@@ -113,7 +113,9 @@ resource "aws_ecs_service" "test" {
 
   # Fargate requires some extra configuration to be set for networking tasks
   network_configuration {
-    subnets = aws_subnet.main[*].id
+    subnets          = aws_subnet.main[*].id
+    security_groups  = [aws_security_group.lb_sg.id]
+    assign_public_ip = true
   }
 }
 
@@ -137,6 +139,11 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   ]
 }
 EOF
+}
+
+resource "aws_iam_role_policy_attachment" "ecs-task-execution-role-policy-attachment" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 ## ALB

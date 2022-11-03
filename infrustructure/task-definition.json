@@ -1,10 +1,14 @@
 [
     {
-        "cpu": 256,
         "essential": true,
         "image": "${image_url}",
-        "memory": 512,
         "name": "${container_name}",
+        "environment": [
+            {
+                "name": "NODE_ENV",
+                "value": "development"
+            }
+        ],
         "portMappings": [
             {
                 "containerPort": 2368
