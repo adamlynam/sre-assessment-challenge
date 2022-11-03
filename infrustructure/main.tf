@@ -71,8 +71,15 @@ resource "aws_security_group" "lb_sg" {
 
 ## ECR
 
-resource "aws_ecr_repository" "main" {
-  name = "clearpoint-todo"
+resource "aws_ecr_repository" "frontend" {
+  name = "clearpoint-todo-frontend"
+
+  # this ensure that we can update existing tags once they are created, this will be key to updating the "latest" tagged image to drive deployment automation
+  image_tag_mutability = "MUTABLE"
+}
+
+resource "aws_ecr_repository" "backend" {
+  name = "clearpoint-todo-backend"
 
   # this ensure that we can update existing tags once they are created, this will be key to updating the "latest" tagged image to drive deployment automation
   image_tag_mutability = "MUTABLE"
@@ -84,15 +91,15 @@ resource "aws_ecs_cluster" "main" {
   name = "terraform_example_ecs_cluster"
 }
 
-resource "aws_ecs_task_definition" "httpd" {
-  family = "tf_example_httpd_td"
+resource "aws_ecs_task_definition" "clearpoint_todo" {
+  family = "clearpoint_todo_app"
 
   container_definitions = templatefile("${path.module}/task-definition.json", {
-    image_url        = "httpd:latest"
-    container_name   = "httpd"
+    image_url        = "clearpoint_todo_frontend:latest"
+    container_name   = "clearpoint_todo_frontend"
     log_group_region = var.aws_region
     log_group_name   = aws_cloudwatch_log_group.app.name
-    log_group_prefix = "httpd"
+    log_group_prefix = "clearpoint_todo_frontend"
   })
 
   # Fargate requires some extra configuration to be set to manage running tasks
@@ -103,16 +110,16 @@ resource "aws_ecs_task_definition" "httpd" {
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
 }
 
-resource "aws_ecs_service" "test" {
-  name            = "tf-example-ecs-httpd"
+resource "aws_ecs_service" "clearpoint-todo" {
+  name            = "clearpoint-todo-ecs"
   launch_type     = "FARGATE"
   cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.httpd.arn
+  task_definition = aws_ecs_task_definition.clearpoint_todo.arn
   desired_count   = var.service_desired
 
   load_balancer {
     target_group_arn = aws_alb_target_group.test.id
-    container_name   = "httpd"
+    container_name   = "clearpoint_todo_frontend"
     container_port   = "80"
   }
 
