@@ -75,15 +75,15 @@ resource "aws_ecs_cluster" "main" {
   name = "terraform_example_ecs_cluster"
 }
 
-resource "aws_ecs_task_definition" "ghost" {
-  family = "tf_example_ghost_td"
+resource "aws_ecs_task_definition" "httpd" {
+  family = "tf_example_httpd_td"
 
   container_definitions = templatefile("${path.module}/task-definition.json", {
-    image_url        = "ghost:latest"
-    container_name   = "ghost"
+    image_url        = "httpd:latest"
+    container_name   = "httpd"
     log_group_region = var.aws_region
     log_group_name   = aws_cloudwatch_log_group.app.name
-    log_group_prefix = "ghost"
+    log_group_prefix = "httpd"
   })
 
   # Fargate requires some extra configuration to be set to manage running tasks
@@ -95,16 +95,16 @@ resource "aws_ecs_task_definition" "ghost" {
 }
 
 resource "aws_ecs_service" "test" {
-  name            = "tf-example-ecs-ghost"
+  name            = "tf-example-ecs-httpd"
   launch_type     = "FARGATE"
   cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.ghost.arn
+  task_definition = aws_ecs_task_definition.httpd.arn
   desired_count   = var.service_desired
 
   load_balancer {
     target_group_arn = aws_alb_target_group.test.id
-    container_name   = "ghost"
-    container_port   = "2368"
+    container_name   = "httpd"
+    container_port   = "80"
   }
 
   depends_on = [
@@ -149,7 +149,7 @@ resource "aws_iam_role_policy_attachment" "ecs-task-execution-role-policy-attach
 ## ALB
 
 resource "aws_alb_target_group" "test" {
-  name        = "tf-example-ecs-ghost"
+  name        = "tf-example-ecs-httpd"
   port        = 8080
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
@@ -180,5 +180,5 @@ resource "aws_cloudwatch_log_group" "ecs" {
 }
 
 resource "aws_cloudwatch_log_group" "app" {
-  name = "tf-ecs-group/app-ghost"
+  name = "tf-ecs-group/app-httpd"
 }
