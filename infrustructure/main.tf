@@ -165,7 +165,7 @@ resource "aws_iam_role_policy_attachment" "ecs-task-execution-role-policy-attach
 ## ALB
 
 resource "aws_alb_target_group" "test" {
-  name        = "tf-example-ecs-httpd"
+  name        = "clearpoint-todo-ecs"
   port        = 8080
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
@@ -196,5 +196,5 @@ resource "aws_cloudwatch_log_group" "ecs" {
 }
 
 resource "aws_cloudwatch_log_group" "app" {
-  name = "tf-ecs-group/app-httpd"
+  name = "tf-ecs-group/app-clearpoint-todo"
 }
