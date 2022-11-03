@@ -1,6 +1,13 @@
 variable "aws_region" {
   description = "The AWS region to create things in."
-  default     = "ap-southeast-2"
+}
+
+variable "application_name" {
+  description = "The name of the shared application this service is part of."
+}
+
+variable "service_name" {
+  description = "The name of the component this service represents."
 }
 
 variable "image_url" {

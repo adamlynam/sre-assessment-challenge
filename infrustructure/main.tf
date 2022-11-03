@@ -98,6 +98,9 @@ module "frontend_ecs_service" {
 
   aws_region = var.aws_region
 
+  application_name = "clearpoint_todo"
+  service_name     = "frontend"
+
   image_url       = "${aws_ecr_repository.frontend.repository_url}:latest"
   cluster_id      = aws_ecs_cluster.main.id
   vpc_id          = aws_vpc.main.id
