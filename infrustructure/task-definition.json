@@ -3,12 +3,6 @@
         "essential": true,
         "image": "${image_url}",
         "name": "${container_name}",
-        "environment": [
-            {
-                "name": "NODE_ENV",
-                "value": "development"
-            }
-        ],
         "portMappings": [
             {
                 "containerPort": 80
