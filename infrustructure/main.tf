@@ -108,6 +108,21 @@ module "frontend_ecs_service" {
   security_groups = [aws_security_group.lb_sg.id]
 }
 
+module "backend_ecs_service" {
+  source = "./common/simple-ecs-service"
+
+  aws_region = var.aws_region
+
+  application_name = "clearpoint_todo"
+  service_name     = "backend"
+
+  image_url       = "${aws_ecr_repository.backend.repository_url}:latest"
+  cluster_id      = aws_ecs_cluster.main.id
+  vpc_id          = aws_vpc.main.id
+  subnets         = aws_subnet.main[*].id
+  security_groups = [aws_security_group.lb_sg.id]
+}
+
 
 ## ALB
 
@@ -125,5 +140,21 @@ resource "aws_alb_listener" "front_end" {
   default_action {
     target_group_arn = module.frontend_ecs_service.target_group_id
     type             = "forward"
+  }
+}
+
+resource "aws_alb_listener_rule" "backend" {
+  listener_arn = aws_alb_listener.front_end.arn
+  priority     = 100
+
+  action {
+    type             = "forward"
+    target_group_arn = module.backend_ecs_service.target_group_id
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/*"]
+    }
   }
 }

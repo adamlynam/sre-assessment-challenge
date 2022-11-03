@@ -41,7 +41,7 @@ resource "aws_ecs_service" "main" {
 ## IAM
 
 resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "ecsTaskExecutionRole"
+  name = "${var.application_name}-${var.service_name}-ecsTaskExecutionRole"
 
   assume_role_policy = <<EOF
 {
