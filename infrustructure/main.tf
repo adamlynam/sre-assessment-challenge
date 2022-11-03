@@ -49,7 +49,7 @@ resource "aws_security_group" "lb_sg" {
   description = "controls access to the application ELB"
 
   vpc_id = aws_vpc.main.id
-  name   = "tf-ecs-lbsg"
+  name   = "clearpoint-todo-ecs-lbsg"
 
   ingress {
     protocol    = "tcp"
@@ -88,7 +88,7 @@ resource "aws_ecr_repository" "backend" {
 ## ECS
 
 resource "aws_ecs_cluster" "main" {
-  name = "terraform_example_ecs_cluster"
+  name = "clearpoint_todo_ecs_cluster"
 }
 
 resource "aws_ecs_task_definition" "clearpoint_todo" {
@@ -118,7 +118,7 @@ resource "aws_ecs_service" "clearpoint-todo" {
   desired_count   = var.service_desired
 
   load_balancer {
-    target_group_arn = aws_alb_target_group.test.id
+    target_group_arn = aws_alb_target_group.main.id
     container_name   = "clearpoint_todo_frontend"
     container_port   = "80"
   }
@@ -164,7 +164,7 @@ resource "aws_iam_role_policy_attachment" "ecs-task-execution-role-policy-attach
 
 ## ALB
 
-resource "aws_alb_target_group" "test" {
+resource "aws_alb_target_group" "main" {
   name        = "clearpoint-todo-ecs"
   port        = 8080
   protocol    = "HTTP"
@@ -173,7 +173,7 @@ resource "aws_alb_target_group" "test" {
 }
 
 resource "aws_alb" "main" {
-  name            = "tf-example-alb-ecs"
+  name            = "clearpoint-todo-alb-ecs"
   subnets         = aws_subnet.main[*].id
   security_groups = [aws_security_group.lb_sg.id]
 }
@@ -184,7 +184,7 @@ resource "aws_alb_listener" "front_end" {
   protocol          = "HTTP"
 
   default_action {
-    target_group_arn = aws_alb_target_group.test.id
+    target_group_arn = aws_alb_target_group.main.id
     type             = "forward"
   }
 }
@@ -192,9 +192,9 @@ resource "aws_alb_listener" "front_end" {
 ## CloudWatch Logs
 
 resource "aws_cloudwatch_log_group" "ecs" {
-  name = "tf-ecs-group/ecs-agent"
+  name = "clearpoint-todo-ecs-group/ecs-agent"
 }
 
 resource "aws_cloudwatch_log_group" "app" {
-  name = "tf-ecs-group/app-clearpoint-todo"
+  name = "clearpoint-todo-ecs-group/app"
 }
