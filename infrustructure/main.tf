@@ -91,86 +91,22 @@ resource "aws_ecs_cluster" "main" {
   name = "clearpoint_todo_ecs_cluster"
 }
 
-resource "aws_ecs_task_definition" "clearpoint_todo" {
-  family = "clearpoint_todo_app"
+### ECS Services
 
-  container_definitions = templatefile("${path.module}/task-definition.json", {
-    image_url        = "${aws_ecr_repository.frontend.repository_url}:latest"
-    container_name   = "clearpoint_todo_frontend"
-    log_group_region = var.aws_region
-    log_group_name   = aws_cloudwatch_log_group.app.name
-    log_group_prefix = "clearpoint_todo_frontend"
-  })
+module "frontend_ecs_service" {
+  source = "./common/simple-ecs-service"
 
-  # Fargate requires some extra configuration to be set to manage running tasks
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = 256
-  memory                   = 512
-  network_mode             = "awsvpc"
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  aws_region = var.aws_region
+
+  image_url       = "${aws_ecr_repository.frontend.repository_url}:latest"
+  cluster_id      = aws_ecs_cluster.main.id
+  vpc_id          = aws_vpc.main.id
+  subnets         = aws_subnet.main[*].id
+  security_groups = [aws_security_group.lb_sg.id]
 }
 
-resource "aws_ecs_service" "clearpoint-todo" {
-  name            = "clearpoint-todo-ecs"
-  launch_type     = "FARGATE"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.clearpoint_todo.arn
-  desired_count   = var.service_desired
-
-  load_balancer {
-    target_group_arn = aws_alb_target_group.main.id
-    container_name   = "clearpoint_todo_frontend"
-    container_port   = "80"
-  }
-
-  depends_on = [
-    aws_alb_listener.front_end,
-  ]
-
-  # Fargate requires some extra configuration to be set for networking tasks
-  network_configuration {
-    subnets          = aws_subnet.main[*].id
-    security_groups  = [aws_security_group.lb_sg.id]
-    assign_public_ip = true
-  }
-}
-
-## IAM
-
-resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "ecsTaskExecutionRole"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2008-10-17",
-  "Statement": [
-    {
-      "Sid": "",
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "ecs-tasks.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}
-EOF
-}
-
-resource "aws_iam_role_policy_attachment" "ecs-task-execution-role-policy-attachment" {
-  role       = aws_iam_role.ecs_task_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
 
 ## ALB
-
-resource "aws_alb_target_group" "main" {
-  name        = "clearpoint-todo-ecs"
-  port        = 8080
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
-  target_type = "ip"
-}
 
 resource "aws_alb" "main" {
   name            = "clearpoint-todo-alb-ecs"
@@ -184,17 +120,7 @@ resource "aws_alb_listener" "front_end" {
   protocol          = "HTTP"
 
   default_action {
-    target_group_arn = aws_alb_target_group.main.id
+    target_group_arn = module.frontend_ecs_service.target_group_id
     type             = "forward"
   }
-}
-
-## CloudWatch Logs
-
-resource "aws_cloudwatch_log_group" "ecs" {
-  name = "clearpoint-todo-ecs-group/ecs-agent"
-}
-
-resource "aws_cloudwatch_log_group" "app" {
-  name = "clearpoint-todo-ecs-group/app"
 }
