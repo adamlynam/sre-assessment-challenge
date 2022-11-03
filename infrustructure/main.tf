@@ -69,6 +69,15 @@ resource "aws_security_group" "lb_sg" {
   }
 }
 
+## ECR
+
+resource "aws_ecr_repository" "main" {
+  name = "clearpoint-todo"
+
+  # this ensure that we can update existing tags once they are created, this will be key to updating the "latest" tagged image to drive deployment automation
+  image_tag_mutability = "MUTABLE"
+}
+
 ## ECS
 
 resource "aws_ecs_cluster" "main" {
