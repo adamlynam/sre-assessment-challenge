@@ -95,7 +95,7 @@ resource "aws_ecs_task_definition" "clearpoint_todo" {
   family = "clearpoint_todo_app"
 
   container_definitions = templatefile("${path.module}/task-definition.json", {
-    image_url        = "clearpoint_todo_frontend:latest"
+    image_url        = "${aws_ecr_repository.frontend.repository_url}:latest"
     container_name   = "clearpoint_todo_frontend"
     log_group_region = var.aws_region
     log_group_name   = aws_cloudwatch_log_group.app.name
