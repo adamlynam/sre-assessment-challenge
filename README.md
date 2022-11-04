@@ -53,6 +53,65 @@ I recommend following the [install instructions on the docker website](https://d
 
 Note: You don't actually need Docker Desktop (except on Windows probably), you just need the docker engine and docker compose. I would caution against Docker Desktop if you can avoid it. Consider following the instructions for your specific distribution, [there is a great one for Debian](https://docs.docker.com/engine/install/debian/).
 
+### Host the todo application
+
+#### Create the infrustructure with Terraform
+
+To generate AWS resources we need to run `terraform apply` from the `infrustructure` directory.
+
+    cd infrustructure
+    terraform apply
+
+You should be told which resources will be created. Type "yes" to confirm. It will take a few minutes to run, but it should eventually complete successfully return a few variables to you.
+
+Make a note of these varaibles.
+
+elb_hostname is the URL where the application will run from. It should be in the format "clearpoint-todo-alb-ecs-xxxxxxxxx.ap-southeast-2.elb.amazonaws.com". The xxxxxxxxx is a set of numbers that make your address unique.
+
+frontend_registry_url and backend_registry_url are the addresses to push built images to for the application. We will push an images there shortly.
+
+#### Build the docker images
+
+We need to build the docker images we want to publish to AWS on our local workstation. Because we installed docker compose earlier and docker compose is used for the development environment we can use that to build the images.
+
+Because the frontend needs to know the domain that the API runs on to build this into our static assets, we need to specify here too. This will be the elb_hostname we got above, with /api on the end.
+
+    docker compose build --build-arg api_endpoint=/api
+
+This may take a few minutes to run, but once it is successful you should have the frontend and backend images built against your workstation.
+
+#### Tag and push images to the container registries
+
+The Elastic Container Service in AWS will be trying to start tasks using the latest image from the two container registries we created, until they arrive the application cannot run and tasks will be failing to start.
+
+We need to tag the images we built earlier for their destination and then push them up. Before we can push the images though, we must use the AWS CLI to authenticate with the container registry for our AWS account.
+
+To authenticate with the docker registry:
+
+    aws ecr get-login-password --region ap-southeast-2 --profile SREAssessment.Infrustructure | docker login --username AWS --password-stdin <frontend_registry_url>
+
+Where `<frontend_registry_url>` is the URL the terraform returned. (you can actually remove the stuff after the / for this stage, but you don't need to bother)
+
+First the frontend:
+
+    docker tag cptodoui:latest <frontend_registry_url>:latest
+    docker push <frontend_registry_url>:latest
+
+Where `<frontend_registry_url>` is the URL the terraform returned.
+
+Then the backend:
+
+    docker tag cptodoapi:latest <backend_registry_url>:latest
+    docker push <backend_registry_url>:latest
+
+Where `<backend_registry_url>` is the URL the terraform returned.
+
+### Visit the running application
+
+You should now be able to visit the running application from the elb_hostname URL that the terraform returned earlier.
+
+NOTE: It may take a few minutes for the Elastic Container Service to pick up the latest images you pushed and start the tasks. Once they are running though, you should have a functional application. 
+
 ## The application
 This repository contains a frontend and a backend service. These services together serve as a ToDo List App.
 Read the below documentation for details about each service.
