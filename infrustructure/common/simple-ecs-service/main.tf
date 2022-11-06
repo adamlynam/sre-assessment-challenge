@@ -1,3 +1,5 @@
+## ECS
+
 resource "aws_ecs_task_definition" "main" {
   family = var.application_name
 
@@ -22,7 +24,7 @@ resource "aws_ecs_service" "main" {
   launch_type     = "FARGATE"
   cluster         = var.cluster_id
   task_definition = aws_ecs_task_definition.main.arn
-  desired_count   = var.service_desired
+  desired_count   = var.service_desired_normal
 
   load_balancer {
     target_group_arn = aws_alb_target_group.main.id
@@ -36,6 +38,21 @@ resource "aws_ecs_service" "main" {
     security_groups  = var.security_groups
     assign_public_ip = true
   }
+
+  # with auto scaling configured, we need to let Terraform know that the desired count should only be set on creation
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
+}
+
+### Autoscaling for ECS
+
+resource "aws_appautoscaling_target" "main" {
+  max_capacity       = var.service_desired_max
+  min_capacity       = var.service_desired_normal
+  resource_id        = "service/${var.cluster_name}/${aws_ecs_service.main.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
 }
 
 ## IAM

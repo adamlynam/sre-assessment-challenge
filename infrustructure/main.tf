@@ -103,6 +103,7 @@ module "frontend_ecs_service" {
 
   image_url       = "${aws_ecr_repository.frontend.repository_url}:latest"
   cluster_id      = aws_ecs_cluster.main.id
+  cluster_name    = aws_ecs_cluster.main.name
   vpc_id          = aws_vpc.main.id
   subnets         = aws_subnet.main[*].id
   security_groups = [aws_security_group.lb_sg.id]
@@ -118,6 +119,7 @@ module "backend_ecs_service" {
 
   image_url       = "${aws_ecr_repository.backend.repository_url}:latest"
   cluster_id      = aws_ecs_cluster.main.id
+  cluster_name    = aws_ecs_cluster.main.name
   vpc_id          = aws_vpc.main.id
   subnets         = aws_subnet.main[*].id
   security_groups = [aws_security_group.lb_sg.id]

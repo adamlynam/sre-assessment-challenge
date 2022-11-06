@@ -18,9 +18,18 @@ variable "cluster_id" {
   description = "The ECS cluster id to attach the ECS service to."
 }
 
-variable "service_desired" {
-  description = "Desired numbers of instances in the ecs service"
+variable "cluster_name" {
+  description = "The ECS cluster name to attach the ECS service to."
+}
+
+variable "service_desired_normal" {
+  description = "Desired numbers of instances in the ecs service at idle load"
   default     = "2" # we default to two tasks to ensure the service is resilient to individual task failures
+}
+
+variable "service_desired_max" {
+  description = "Desired numbers of instances in the ecs service at high load"
+  default     = "10"
 }
 
 variable "vpc_id" {
