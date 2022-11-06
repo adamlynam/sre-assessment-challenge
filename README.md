@@ -22,7 +22,7 @@ NOTE: If you are confident with how terraform and its AWS provider interact you 
 
 The terraform code in his solution is configured to use a profile named `SREAssessment.Infrustructure` by default, so if we set up that profile things will go much smoother. 
 
- 1. Either create a new AWS account or log into your existing one.
+ 1. Either create a new AWS account or log into your existing one. NOTE: I strongly discourage you from using a root user for this. Consider creating an IAM user with full AWS Administrator permissions instead.
  2. Head to the [Security credentials](https://us-east-1.console.aws.amazon.com/iam/home?region=ap-southeast-2#/security_credentials) in the management console.
  3. Select "Access keys (access key ID and secret access key)".
  4. Click "Create New Access Key" and expand the "Show Access Key" drop down to see your keys.
