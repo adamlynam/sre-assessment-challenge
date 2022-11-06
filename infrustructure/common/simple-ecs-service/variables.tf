@@ -20,7 +20,7 @@ variable "cluster_id" {
 
 variable "service_desired" {
   description = "Desired numbers of instances in the ecs service"
-  default     = "1"
+  default     = "2" # we default to two tasks to ensure the service is resilient to individual task failures
 }
 
 variable "vpc_id" {
