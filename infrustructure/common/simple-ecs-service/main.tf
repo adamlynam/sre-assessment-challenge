@@ -55,6 +55,22 @@ resource "aws_appautoscaling_target" "main" {
   service_namespace  = "ecs"
 }
 
+resource "aws_appautoscaling_policy" "cpu_scaling" {
+  name               = "${var.application_name}-${var.service_name}-80%-cpu-autoscaling"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.main.resource_id
+  scalable_dimension = aws_appautoscaling_target.main.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.main.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+
+    target_value = 80 # this value should be informed by load testing, it is currently arbitrary
+  }
+}
+
 ## IAM
 
 resource "aws_iam_role" "ecs_task_execution_role" {
