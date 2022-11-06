@@ -4,6 +4,8 @@
 
 My solution is built using [Terraform](https://www.terraform.io/), targets the AWS public cloud and makes use of the Elastic Container Service. All of the code for the infrustructure can be found in the `infrustructure` sub directory in this repository.
 
+![A diagram showing the AWS infrustructure for this application](infrustructure-diagram.png "AWS infrustructure for this application")
+
 ### Intial setup
 
 To create the AWS resources in the solution and populate them you will need a few tools installed on your workstation:
