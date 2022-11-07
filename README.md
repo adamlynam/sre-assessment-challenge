@@ -114,6 +114,12 @@ You should now be able to visit the running application from the elb_hostname UR
 
 NOTE: It may take a few minutes for the Elastic Container Service to pick up the latest images you pushed and start the tasks. Once they are running though, you should have a functional application. 
 
+### Making changes
+
+To deploy changes, simply build, tag and push images. The Continous Deployment pipeline will take care of the rest. 
+
+Your changes should appear within 10 minutes after pushing the latest image.
+
 ## The application
 This repository contains a frontend and a backend service. These services together serve as a ToDo List App.
 Read the below documentation for details about each service.
