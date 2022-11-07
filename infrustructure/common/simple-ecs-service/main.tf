@@ -122,7 +122,7 @@ EOF
 }
 
 resource "aws_iam_role_policy" "codepipeline_policy" {
-  name = "codepipeline_policy"
+  name = "${var.application_name}-${var.service_name}-codepipeline_policy"
   role = aws_iam_role.codepipeline_role.id
 
   policy = <<EOF
@@ -162,6 +162,49 @@ EOF
 resource "aws_iam_role_policy_attachment" "codepipeline-role-policy-attachment" {
   role       = aws_iam_role.codepipeline_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonECS_FullAccess"
+}
+
+### Role for CloudWatch Event
+
+resource "aws_iam_role" "cloudwatch_event_role" {
+  name               = "${var.application_name}-${var.service_name}-cloudwatch-event-role"
+  assume_role_policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": ["events.amazonaws.com"]
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy" "cloudwatch_event_role_policy" {
+  name = "${var.application_name}-${var.service_name}-cloudwatch-event-policy"
+  role = aws_iam_role.cloudwatch_event_role.id
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+        "Effect": "Allow",
+        "Action": [
+            "codepipeline:StartPipelineExecution"
+        ],
+        "Resource": [
+            "${aws_codepipeline.main.arn}"
+        ]
+    }
+  ]
+}
+EOF
 }
 
 ## ALB
@@ -233,6 +276,46 @@ resource "aws_codepipeline" "main" {
       }
     }
   }
+}
+
+## CloudWatch Event
+
+# due to a limitation in the CodePipeline module we need to define an event to monitor ECR ourselves
+
+resource "aws_cloudwatch_event_rule" "image_push" {
+  name     = "${var.application_name}-${var.service_name}-ecr-image-push"
+  role_arn = aws_iam_role.cloudwatch_event_role.arn
+
+  event_pattern = <<EOF
+{
+  "source": [
+    "aws.ecr"
+  ],
+  "detail": {
+    "action-type": [
+      "PUSH"
+    ],
+    "image-tag": [
+      "latest"
+    ],
+    "repository-name": [
+      "${var.repository_name}"
+    ],
+    "result": [
+      "SUCCESS"
+    ]
+  },
+  "detail-type": [
+    "ECR Image Action"
+  ]
+}
+EOF
+}
+
+resource "aws_cloudwatch_event_target" "codepipeline" {
+  rule     = aws_cloudwatch_event_rule.image_push.name
+  arn      = aws_codepipeline.main.arn
+  role_arn = aws_iam_role.cloudwatch_event_role.arn
 }
 
 ## S3
