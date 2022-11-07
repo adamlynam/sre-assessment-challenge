@@ -10,8 +10,12 @@ variable "service_name" {
   description = "The name of the component this service represents."
 }
 
-variable "image_url" {
+variable "repository_url" {
   description = "The URL to pull the source image for the task from."
+}
+
+variable "image_tag" {
+  description = "The image tag to pull the source image for the task from."
 }
 
 variable "cluster_id" {

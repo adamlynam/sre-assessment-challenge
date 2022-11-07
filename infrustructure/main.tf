@@ -88,7 +88,7 @@ resource "aws_ecr_repository" "backend" {
 ## ECS
 
 resource "aws_ecs_cluster" "main" {
-  name = "clearpoint_todo_ecs_cluster"
+  name = "clearpoint-todo-ecs-cluster"
 }
 
 ### ECS Services
@@ -98,10 +98,11 @@ module "frontend_ecs_service" {
 
   aws_region = var.aws_region
 
-  application_name = "clearpoint_todo"
+  application_name = "clearpoint-todo"
   service_name     = "frontend"
 
-  image_url       = "${aws_ecr_repository.frontend.repository_url}:latest"
+  repository_url  = aws_ecr_repository.frontend.repository_url
+  image_tag       = "latest"
   cluster_id      = aws_ecs_cluster.main.id
   cluster_name    = aws_ecs_cluster.main.name
   vpc_id          = aws_vpc.main.id
@@ -114,10 +115,11 @@ module "backend_ecs_service" {
 
   aws_region = var.aws_region
 
-  application_name = "clearpoint_todo"
+  application_name = "clearpoint-todo"
   service_name     = "backend"
 
-  image_url       = "${aws_ecr_repository.backend.repository_url}:latest"
+  repository_url  = aws_ecr_repository.backend.repository_url
+  image_tag       = "latest"
   cluster_id      = aws_ecs_cluster.main.id
   cluster_name    = aws_ecs_cluster.main.name
   vpc_id          = aws_vpc.main.id

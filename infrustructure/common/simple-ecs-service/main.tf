@@ -4,7 +4,7 @@ resource "aws_ecs_task_definition" "main" {
   family = var.application_name
 
   container_definitions = templatefile("${path.module}/task-definition.json", {
-    image_url        = var.image_url
+    image_url        = "${var.repository_url}:${var.image_tag}"
     container_name   = var.service_name
     log_group_region = var.aws_region
     log_group_name   = aws_cloudwatch_log_group.app.name
@@ -67,11 +67,13 @@ resource "aws_appautoscaling_policy" "cpu_scaling" {
       predefined_metric_type = "ECSServiceAverageCPUUtilization"
     }
 
-    target_value = 80 # this value should be informed by load testing, it is currently arbitrary
+    target_value = 80 # this value should be informed by load testing, it is currently arbi
   }
 }
 
 ## IAM
+
+### Role for task exectuion
 
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "${var.application_name}-${var.service_name}-ecsTaskExecutionRole"
@@ -98,6 +100,54 @@ resource "aws_iam_role_policy_attachment" "ecs-task-execution-role-policy-attach
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+### Role for CodePipeline
+
+resource "aws_iam_role" "codepipeline_role" {
+  name = "${var.application_name}-${var.service_name}-codePipelineRole"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "codepipeline.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy" "codepipeline_policy" {
+  name = "codepipeline_policy"
+  role = aws_iam_role.codepipeline_role.id
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect":"Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion",
+        "s3:GetBucketVersioning",
+        "s3:PutObjectAcl",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "${aws_s3_bucket.codepipeline_bucket.arn}",
+        "${aws_s3_bucket.codepipeline_bucket.arn}/*"
+      ]
+    }
+  ]
+}
+EOF
+}
+
 ## ALB
 
 resource "aws_alb_target_group" "main" {
@@ -105,6 +155,59 @@ resource "aws_alb_target_group" "main" {
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
+}
+
+## CodePipeline
+
+resource "aws_codepipeline" "main" {
+  name     = "${var.application_name}-${var.service_name}-pipeline"
+  role_arn = aws_iam_role.codepipeline_role.arn
+
+  artifact_store {
+    location = aws_s3_bucket.codepipeline_bucket.bucket
+    type     = "S3"
+  }
+
+  stage {
+    name = "Image Pushed"
+
+    action {
+      name             = "Image Pushed"
+      category         = "Source"
+      owner            = "AWS"
+      provider         = "ECR"
+      version          = "1"
+      output_artifacts = ["source_output"]
+
+      configuration = {
+        RepositoryName = var.repository_url
+        ImageTag       = "latest"
+      }
+    }
+  }
+
+  stage {
+    name = "Deploy"
+
+    action {
+      name     = "Restart Service"
+      category = "Deploy"
+      owner    = "AWS"
+      provider = "ECS"
+      version  = "1"
+
+      configuration = {
+        ClusterName = var.cluster_name
+        ServiceName = aws_ecs_service.main.name
+      }
+    }
+  }
+}
+
+## S3
+
+resource "aws_s3_bucket" "codepipeline_bucket" {
+  bucket = "${var.application_name}-${var.service_name}-codepipeline-artifacts"
 }
 
 ## CloudWatch Logs
