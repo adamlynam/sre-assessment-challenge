@@ -10,8 +10,16 @@ variable "service_name" {
   description = "The name of the component this service represents."
 }
 
+variable "repository_arn" {
+  description = "The ARN of the repository to pull the source image for the task from."
+}
+
 variable "repository_url" {
-  description = "The URL to pull the source image for the task from."
+  description = "The URL of the repository to pull the source image for the task from."
+}
+
+variable "repository_name" {
+  description = "The name of the repository to pull the source image for the task from."
 }
 
 variable "image_tag" {

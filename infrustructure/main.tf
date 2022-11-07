@@ -101,7 +101,9 @@ module "frontend_ecs_service" {
   application_name = "clearpoint-todo"
   service_name     = "frontend"
 
+  repository_arn  = aws_ecr_repository.frontend.arn
   repository_url  = aws_ecr_repository.frontend.repository_url
+  repository_name = aws_ecr_repository.frontend.name
   image_tag       = "latest"
   cluster_id      = aws_ecs_cluster.main.id
   cluster_name    = aws_ecs_cluster.main.name
@@ -118,7 +120,9 @@ module "backend_ecs_service" {
   application_name = "clearpoint-todo"
   service_name     = "backend"
 
+  repository_arn  = aws_ecr_repository.backend.arn
   repository_url  = aws_ecr_repository.backend.repository_url
+  repository_name = aws_ecr_repository.backend.name
   image_tag       = "latest"
   cluster_id      = aws_ecs_cluster.main.id
   cluster_name    = aws_ecs_cluster.main.name

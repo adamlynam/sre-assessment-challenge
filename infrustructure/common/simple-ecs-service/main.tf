@@ -139,13 +139,29 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
         "s3:PutObject"
       ],
       "Resource": [
-        "${aws_s3_bucket.codepipeline_bucket.arn}",
-        "${aws_s3_bucket.codepipeline_bucket.arn}/*"
+        "${aws_s3_bucket.codepipeline_artifacts.arn}",
+        "${aws_s3_bucket.codepipeline_artifacts.arn}/*",
+        "${aws_s3_bucket.codepipeline_imagedefinitions.arn}",
+        "${aws_s3_bucket.codepipeline_imagedefinitions.arn}/*"
+      ]
+    },
+    {
+      "Effect":"Allow",
+      "Action": [
+        "ecr:DescribeImages"
+      ],
+      "Resource": [
+        "${var.repository_arn}"
       ]
     }
   ]
 }
 EOF
+}
+
+resource "aws_iam_role_policy_attachment" "codepipeline-role-policy-attachment" {
+  role       = aws_iam_role.codepipeline_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonECS_FullAccess"
 }
 
 ## ALB
@@ -164,24 +180,38 @@ resource "aws_codepipeline" "main" {
   role_arn = aws_iam_role.codepipeline_role.arn
 
   artifact_store {
-    location = aws_s3_bucket.codepipeline_bucket.bucket
+    location = aws_s3_bucket.codepipeline_artifacts.bucket
     type     = "S3"
   }
 
   stage {
-    name = "Image Pushed"
+    name = "NewImage"
 
     action {
-      name             = "Image Pushed"
+      name             = "NewImage"
       category         = "Source"
       owner            = "AWS"
       provider         = "ECR"
       version          = "1"
-      output_artifacts = ["source_output"]
+      output_artifacts = ["image_output"]
 
       configuration = {
-        RepositoryName = var.repository_url
+        RepositoryName = var.repository_name
         ImageTag       = "latest"
+      }
+    }
+
+    action {
+      name             = "ImageDefinitions"
+      category         = "Source"
+      owner            = "AWS"
+      provider         = "S3"
+      version          = "1"
+      output_artifacts = ["imagedefinitions_output"]
+
+      configuration = {
+        S3Bucket    = aws_s3_bucket.codepipeline_imagedefinitions.bucket
+        S3ObjectKey = "imagedefinitions"
       }
     }
   }
@@ -190,11 +220,12 @@ resource "aws_codepipeline" "main" {
     name = "Deploy"
 
     action {
-      name     = "Restart Service"
-      category = "Deploy"
-      owner    = "AWS"
-      provider = "ECS"
-      version  = "1"
+      name            = "Deploy"
+      category        = "Deploy"
+      owner           = "AWS"
+      provider        = "ECS"
+      input_artifacts = ["imagedefinitions_output"]
+      version         = "1"
 
       configuration = {
         ClusterName = var.cluster_name
@@ -206,8 +237,37 @@ resource "aws_codepipeline" "main" {
 
 ## S3
 
-resource "aws_s3_bucket" "codepipeline_bucket" {
+resource "aws_s3_bucket" "codepipeline_artifacts" {
   bucket = "${var.application_name}-${var.service_name}-codepipeline-artifacts"
+}
+
+resource "aws_s3_bucket" "codepipeline_imagedefinitions" {
+  bucket = "${var.application_name}-${var.service_name}-codepipeline-imagedefinitions"
+}
+
+# an s3 bucket must be versioned to act as a codepipeline source
+resource "aws_s3_bucket_versioning" "codepipeline_imagedefinitions_versioning" {
+  bucket = aws_s3_bucket.codepipeline_imagedefinitions.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# we populate this s3 bucket with an imagedefinitions.json file for the deploy to ECS
+data "archive_file" "imagedefinitions_json_zip" {
+  type                    = "zip"
+  source_content_filename = "imagedefinitions.json"
+  source_content = templatefile("${path.module}/imagedefinitions.json", {
+    image_url      = "${var.repository_url}:${var.image_tag}"
+    container_name = var.service_name
+  })
+  output_path = "${path.module}/files/${var.service_name}/imagedefinitions.zip"
+}
+
+resource "aws_s3_object" "imagedefinitions_json" {
+  bucket = aws_s3_bucket.codepipeline_imagedefinitions.bucket
+  key    = "imagedefinitions"
+  source = data.archive_file.imagedefinitions_json_zip.output_path
 }
 
 ## CloudWatch Logs

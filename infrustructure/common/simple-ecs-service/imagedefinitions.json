@@ -1,0 +1,6 @@
+[
+    {
+        "name": "${container_name}",
+        "imageUri": "${image_url}"
+    }
+]
